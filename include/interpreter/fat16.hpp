@@ -1,9 +1,10 @@
 #pragma once
 
+#include <interpreter/fat.hpp>
 #include <string>
 
 namespace interpreter {
-  class Fat16 {
+  class Fat16 : public Fat {
   public:
     typedef struct fat16_BS {
       unsigned char bootjmp[3];           // 0  | 3
@@ -27,13 +28,13 @@ namespace interpreter {
 
     } __attribute__((packed)) fat16_BS_t;
 
-    Fat16(std::string fila_name);
+    Fat16(std::string file_name);
     ~Fat16() = default;
 
-    void sample_function();
-    void unimplemented_logic();
+    Fat16* print_boot_record() override;
+    Fat16* list_directory() override;
 
-    Fat16* print_boot_record();
+    inline fat16_BS_t get_boot_record() { return this->boot_record; }
 
   private:
     fat16_BS_t boot_record;

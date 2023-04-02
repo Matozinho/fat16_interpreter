@@ -1,5 +1,6 @@
 #include <fmt/core.h>
 
+#include <cli/cli.hpp>
 #include <cxxopts.hpp>
 #include <interpreter/fat16.hpp>
 
@@ -8,7 +9,7 @@ auto main(int argc, char** argv) -> int {
 
   // change positional parameters in the help message
   options.positional_help("[fat16-file]");
-  
+
   // clang-format off
   options.add_options()
     ("h,help", "Print help")
@@ -26,6 +27,8 @@ auto main(int argc, char** argv) -> int {
 
   if (result.count("file")) {
     interpreter::Fat16 fat16(result["file"].as<std::string>());
+    Cli cli(&fat16);
+    cli.run();
   } else {
     fmt::print("{}\n", options.help());
     throw std::runtime_error("No file provided");

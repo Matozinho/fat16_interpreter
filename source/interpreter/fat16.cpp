@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <fstream>
 #include <interpreter/fat16.hpp>
 #include <ios>
 #include <iostream>
@@ -10,18 +11,15 @@
 
 namespace interpreter {
   Fat16::Fat16(std::string file_name) {
-    FILE* fp;
+    std::ifstream file(file_name, std::ios::binary);
 
-    // convert the filename to a c string
-    const char* c_file_name = file_name.c_str();
+    if (!file.is_open()) {
+      throw std::runtime_error("Unable to open file: " + file_name);
+    }
 
-    fp = std::fopen(c_file_name, "rb");
-    fseek(fp, 0, SEEK_SET);
-    fread(&this->boot_record, sizeof(Fat16::fat16_BS_t), 1, fp);
-
-    // check if the file is a valid fat16 image:
-    // https://en.wikipedia.org/wiki/Design_of_the_FAT_file_system#BPB20_OFS_0Ah
-    // if (this->boot_record.media_type != 0x04) throw std::runtime_error("Invalid FAT16 image");
+    file.seekg(0, std::ios::beg);
+    file.read(reinterpret_cast<char*>(&this->boot_record), sizeof(Fat16::fat16_BS_t));
+    file.close();
 
     this->define_fat_begin()->define_root_dir_begin()->define_data_sector_begin();
   };
@@ -47,9 +45,10 @@ namespace interpreter {
     return this;
   }
 
-  void Fat16::sample_function() { fmt::print("Hello, {}!\n", "world"); }
-
-  void unimplemented_logic() { throw std::runtime_error("Unimplemented logic"); }
+  Fat16* Fat16::list_directory() {
+    this->unimplemented_logic();
+    return this;
+  }
 
   Fat16* Fat16::print_boot_record() {
     std::cout << std::hex << std::showbase
@@ -78,6 +77,10 @@ namespace interpreter {
               << "hidden_sector_count: " << this->boot_record.hidden_sector_count << std::endl;
     std::cout << std::hex << std::showbase
               << "total_sectors_32: " << this->boot_record.total_sectors_32 << std::endl;
+    fmt::print("====================================\n");
+    fmt::print("fat_begin: {}\n", this->fat_begin);
+    fmt::print("root_dir_begin: {}\n", this->root_dir_begin);
+    fmt::print("data_sector_begin: {}\n", this->data_sector_begin);
 
     return this;
   }
