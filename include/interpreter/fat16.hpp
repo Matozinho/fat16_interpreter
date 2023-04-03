@@ -58,7 +58,7 @@ namespace interpreter {
       return this;
     }
     Fat16* print_boot_record();
-    std::vector<fat_dir_entry> get_dir_entries(unsigned int dir_begin);
+    std::vector<fat_dir_entry> get_dir_entries(unsigned short first_cluster);
     std::vector<unsigned char> get_file(fat_dir_entry file);
     std::vector<unsigned short> get_cluster_chain(unsigned short first_cluster);
 
@@ -67,6 +67,7 @@ namespace interpreter {
     unsigned int get_fat_begin() { return this->fat_begin; };
     unsigned int get_root_dir_begin() { return this->root_dir_begin; };
     unsigned int get_data_sector_begin() { return this->data_sector_begin; };
+    unsigned int get_cluster_addr(unsigned short cluster);
 
   private:
     fat_BS boot_record;

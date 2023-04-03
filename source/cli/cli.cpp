@@ -27,6 +27,31 @@ Cli* Cli::execute_command(const std::string& command) {
   return this;
 }
 
+void Cli::change_directory(std::string dir_name) {
+  auto dir_it = std::find_if(this->current_dir_entries.begin(), this->current_dir_entries.end(),
+                             [&dir_name](const interpreter::Fat16::fat_dir_entry& entry) {
+                               return Utils::mount_name(entry.name, entry.extension) == dir_name;
+                             });
+
+  if (dir_it == this->current_dir_entries.end()) {
+    fmt::print("Directory not found\n");
+    return;
+  }
+
+  interpreter::Fat16::fat_dir_entry& dir_entry
+      = *(reinterpret_cast<interpreter::Fat16::fat_dir_entry*>(&(*dir_it)));
+
+  if (static_cast<interpreter::Fat16::FileType>(dir_entry.attribute)
+      != interpreter::Fat16::FileType::DIRECTORY) {
+    fmt::print("Is not a directory\n");
+
+    return;
+  }
+
+  this->current_dir_first_cluster = dir_entry.low_first_cluster;
+  this->current_dir_entries = this->fat->get_dir_entries(this->current_dir_first_cluster);
+}
+
 void Cli::list_directory() {
   fmt::print("{:<10}{:<12}{:<20}\n", "type", "name", "size(bytes)");
   fmt::print("{:-<10}{:-<12}{:-<20}\n", "", "", "");

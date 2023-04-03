@@ -50,19 +50,30 @@ namespace interpreter {
     return this;
   }
 
-  std::vector<Fat16::fat_dir_entry> Fat16::get_dir_entries(unsigned int dir_begin) {
+  std::vector<Fat16::fat_dir_entry> Fat16::get_dir_entries(unsigned short first_cluster) {
+    std::vector<unsigned short> cluster_chain = this->get_cluster_chain(first_cluster);
     Fat16::fat_dir_entry dir_entry;
     std::vector<Fat16::fat_dir_entry> dir_entries;
 
-    this->file->seekg(dir_begin, std::ios::beg);
-    this->file->read(reinterpret_cast<char*>(&dir_entry), sizeof(Fat16::fat_dir_entry));
+    const unsigned int sizeof_dir_entry = sizeof(Fat16::fat_dir_entry);
+    unsigned int bytes_per_cluster
+        = this->boot_record.bytes_per_sector * this->boot_record.sectors_per_cluster;
 
-    while (dir_entry.name[0] != 0x00) {
-      if (dir_entry.name[0] != 0xE5 && dir_entry.attribute != 0x0F) {
-        dir_entries.push_back(dir_entry);
+    for (unsigned short cluster : cluster_chain) {
+      unsigned int dir_begin = this->get_cluster_addr(cluster);
+
+      this->file->seekg(dir_begin, std::ios::beg);
+      this->file->read(reinterpret_cast<char*>(&dir_entry), sizeof_dir_entry);
+      unsigned int readed_bytes = sizeof(Fat16::fat_dir_entry);
+
+      while (dir_entry.name[0] != 0x00 && readed_bytes < bytes_per_cluster) {
+        if (dir_entry.name[0] != 0xE5 && dir_entry.attribute != 0x0F) {
+          dir_entries.push_back(dir_entry);
+        }
+
+        this->file->read(reinterpret_cast<char*>(&dir_entry), sizeof_dir_entry);
+        readed_bytes += sizeof_dir_entry;
       }
-
-      this->file->read(reinterpret_cast<char*>(&dir_entry), sizeof(Fat16::fat_dir_entry));
     }
 
     return dir_entries;
@@ -81,6 +92,13 @@ namespace interpreter {
     return cluster_chain;
   }
 
+  unsigned int Fat16::get_cluster_addr(unsigned short cluster) {
+    if (cluster == 0) return this->root_dir_begin;
+    return this->data_sector_begin
+           + (cluster - 2) * this->boot_record.sectors_per_cluster
+                 * this->boot_record.bytes_per_sector;
+  }
+
   std::vector<unsigned char> Fat16::get_file(Fat16::fat_dir_entry file_entry) {
     std::vector<unsigned char> file;
     std::vector<unsigned short> cluster_chain
@@ -91,9 +109,7 @@ namespace interpreter {
     unsigned int remaining_bytes = file_entry.file_size;
 
     for (unsigned short cluster : cluster_chain) {
-      unsigned int cluster_begin = this->data_sector_begin
-                                   + (cluster - 2) * this->boot_record.sectors_per_cluster
-                                         * this->boot_record.bytes_per_sector;
+      unsigned int cluster_begin = this->get_cluster_addr(cluster);
 
       // place the pointer in the right addr in the mem
       this->file->seekg(cluster_begin, std::ios::beg);
