@@ -27,6 +27,23 @@ Cli* Cli::execute_command(const std::string& command) {
   return this;
 }
 
+void Cli::get_path() {
+  std::stack<interpreter::Fat16::fat_dir_entry> dir_stack_copy = dir_stack;
+  std::stack<interpreter::Fat16::fat_dir_entry> temp_stack;
+
+  while (!dir_stack_copy.empty()) {
+    temp_stack.push(dir_stack_copy.top());
+    dir_stack_copy.pop();
+  }
+
+  while (!temp_stack.empty()) {
+    const interpreter::Fat16::fat_dir_entry& entry = temp_stack.top();
+    fmt::print("{}/", Utils::mount_name(entry.name, entry.extension));
+    temp_stack.pop();
+  }
+  std::cout << std::endl;
+}
+
 void Cli::change_directory(std::string dir_name) {
   auto dir_it = std::find_if(this->current_dir_entries.begin(), this->current_dir_entries.end(),
                              [&dir_name](const interpreter::Fat16::fat_dir_entry& entry) {
@@ -48,8 +65,12 @@ void Cli::change_directory(std::string dir_name) {
     return;
   }
 
-  this->current_dir_first_cluster = dir_entry.low_first_cluster;
-  this->current_dir_entries = this->fat->get_dir_entries(this->current_dir_first_cluster);
+  this->current_dir_entry = dir_entry;
+  this->current_dir_entries = this->fat->get_dir_entries(this->current_dir_entry.low_first_cluster);
+  if (Utils::mount_name(dir_entry.name, dir_entry.extension) == "..")
+    this->dir_stack.pop();
+  else
+    this->dir_stack.push(this->current_dir_entry);
 }
 
 void Cli::list_directory() {
@@ -103,7 +124,7 @@ Cli* Cli::run() {
   penis::PromptBuilder repl;
 
   repl.subscribe([this](const std::string& command) { this->execute_command(command); });
-  repl.prompt("> ");
+  repl.prompt("|> ");
 
   repl.run();
 
