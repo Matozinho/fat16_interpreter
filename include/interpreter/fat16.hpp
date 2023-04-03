@@ -1,12 +1,15 @@
 #pragma once
 
-#include <interpreter/fat.hpp>
+#include <fmt/core.h>
+
+#include <fstream>
 #include <string>
+#include <vector>
 
 namespace interpreter {
-  class Fat16 : public Fat {
+  class Fat16 {
   public:
-    typedef struct fat16_BS {
+    struct fat_BS {
       unsigned char bootjmp[3];           // 0  | 3
       unsigned char oem_name[8];          // 3  | 8
       unsigned short bytes_per_sector;    // 11 | 2
@@ -26,18 +29,47 @@ namespace interpreter {
       // this is.
       unsigned char extended_section[54];
 
-    } __attribute__((packed)) fat16_BS_t;
+    } __attribute__((packed));
+
+    struct fat_dir_entry {
+      unsigned char name[8];
+      unsigned char extension[3];
+      unsigned char attribute;
+      unsigned char reserved_windows_nt;
+      unsigned char creation_time_in_tenths_of_second;
+      unsigned short creation_time;
+      unsigned short creation_date;
+      unsigned short last_access;
+      unsigned short high_first_cluster;
+      unsigned short last_modification_time;
+      unsigned short last_modification_date;
+      unsigned short low_first_cluster;
+      unsigned int file_size;
+
+    } __attribute__((packed));
+
+    enum class FileType : unsigned char { DIRECTORY = 0x10, ARCHIVE = 0x20 };
 
     Fat16(std::string file_name);
-    ~Fat16() = default;
+    ~Fat16();
 
-    Fat16* print_boot_record() override;
-    Fat16* list_directory() override;
+    inline Fat16* unimplemented_logic() {
+      fmt::print("Unimplemented logic\n");
+      return this;
+    }
+    Fat16* print_boot_record();
+    std::vector<fat_dir_entry> get_dir_entries(unsigned int dir_begin);
 
-    inline fat16_BS_t get_boot_record() { return this->boot_record; }
+    // getters
+    fat_BS* get_boot_record() { return &this->boot_record; };
+    unsigned int get_fat_begin() { return this->fat_begin; };
+    unsigned int get_root_dir_begin() { return this->root_dir_begin; };
+    unsigned int get_data_sector_begin() { return this->data_sector_begin; };
 
   private:
-    fat16_BS_t boot_record;
+    fat_BS boot_record;
+    std::ifstream* file;
+
     unsigned int fat_begin;
     unsigned int root_dir_begin;
     unsigned int data_sector_begin;

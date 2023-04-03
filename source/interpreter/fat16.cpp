@@ -8,21 +8,26 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace interpreter {
   Fat16::Fat16(std::string file_name) {
-    std::ifstream file(file_name, std::ios::binary);
+    this->file = new std::ifstream(file_name, std::ios::binary);
 
-    if (!file.is_open()) {
+    if (!this->file->is_open()) {
       throw std::runtime_error("Unable to open file: " + file_name);
     }
 
-    file.seekg(0, std::ios::beg);
-    file.read(reinterpret_cast<char*>(&this->boot_record), sizeof(Fat16::fat16_BS_t));
-    file.close();
+    this->file->seekg(0, std::ios::beg);
+    this->file->read(reinterpret_cast<char*>(&this->boot_record), sizeof(Fat16::fat_BS));
 
     this->define_fat_begin()->define_root_dir_begin()->define_data_sector_begin();
   };
+
+  Fat16::~Fat16() {
+    this->file->close();
+    delete this->file;
+  }
 
   Fat16* Fat16::define_fat_begin() {
     this->fat_begin = this->boot_record.reserved_sectors * this->boot_record.bytes_per_sector;
@@ -45,9 +50,22 @@ namespace interpreter {
     return this;
   }
 
-  Fat16* Fat16::list_directory() {
-    this->unimplemented_logic();
-    return this;
+  std::vector<Fat16::fat_dir_entry> Fat16::get_dir_entries(unsigned int dir_begin) {
+    Fat16::fat_dir_entry dir_entry;
+    std::vector<Fat16::fat_dir_entry> dir_entries;
+
+    this->file->seekg(dir_begin, std::ios::beg);
+    this->file->read(reinterpret_cast<char*>(&dir_entry), sizeof(Fat16::fat_dir_entry));
+
+    while (dir_entry.name[0] != 0x00) {
+      if (dir_entry.name[0] != 0xE5 && dir_entry.attribute != 0x0F) {
+        dir_entries.push_back(dir_entry);
+      }
+
+      this->file->read(reinterpret_cast<char*>(&dir_entry), sizeof(Fat16::fat_dir_entry));
+    }
+
+    return dir_entries;
   }
 
   Fat16* Fat16::print_boot_record() {
