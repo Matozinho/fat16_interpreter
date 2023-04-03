@@ -59,6 +59,8 @@ namespace interpreter {
     }
     Fat16* print_boot_record();
     std::vector<fat_dir_entry> get_dir_entries(unsigned int dir_begin);
+    std::vector<unsigned char> get_file(fat_dir_entry file);
+    std::vector<unsigned short> get_cluster_chain(unsigned short first_cluster);
 
     // getters
     fat_BS* get_boot_record() { return &this->boot_record; };

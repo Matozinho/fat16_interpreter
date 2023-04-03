@@ -1,7 +1,9 @@
 #pragma once
 
+#include <sstream>
 #include <string>
 #include <utils/utils.hpp>
+#include <vector>
 
 namespace Utils {
   std::string trim(const std::string& str) {
@@ -21,5 +23,17 @@ namespace Utils {
 
     std::string filename = trimmedName + dot + trimmedExtension;
     return filename;
+  }
+
+  std::vector<std::string> split(const std::string& line, char delimiter) {
+    std::istringstream iss(line);
+    std::vector<std::string> words;
+    std::string word;
+
+    while (std::getline(iss, word, delimiter)) {
+      words.push_back(word);
+    }
+
+    return words;
   }
 }  // namespace Utils

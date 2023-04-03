@@ -68,6 +68,52 @@ namespace interpreter {
     return dir_entries;
   }
 
+  std::vector<unsigned short> Fat16::get_cluster_chain(unsigned short first_cluster) {
+    std::vector<unsigned short> cluster_chain;
+    unsigned short next_cluster = first_cluster;
+
+    while (next_cluster < 0xFFF8) {
+      cluster_chain.push_back(next_cluster);
+      this->file->seekg(this->fat_begin + next_cluster * 2, std::ios::beg);
+      this->file->read(reinterpret_cast<char*>(&next_cluster), sizeof(unsigned short));
+    }
+
+    return cluster_chain;
+  }
+
+  std::vector<unsigned char> Fat16::get_file(Fat16::fat_dir_entry file_entry) {
+    std::vector<unsigned char> file;
+    std::vector<unsigned short> cluster_chain
+        = this->get_cluster_chain(file_entry.low_first_cluster);
+
+    unsigned int bytes_per_cluster
+        = this->boot_record.sectors_per_cluster * this->boot_record.bytes_per_sector;
+    unsigned int remaining_bytes = file_entry.file_size;
+
+    for (unsigned short cluster : cluster_chain) {
+      unsigned int cluster_begin = this->data_sector_begin
+                                   + (cluster - 2) * this->boot_record.sectors_per_cluster
+                                         * this->boot_record.bytes_per_sector;
+
+      // place the pointer in the right addr in the mem
+      this->file->seekg(cluster_begin, std::ios::beg);
+
+      // validate the size of the cluster to read
+      unsigned int bytes_to_read = bytes_per_cluster;
+      if (remaining_bytes < bytes_per_cluster) {
+        bytes_to_read = remaining_bytes;
+      }
+      remaining_bytes -= bytes_to_read;
+
+      std::vector<unsigned char> bytes(bytes_to_read);
+      this->file->read(reinterpret_cast<char*>(bytes.data()), bytes_to_read);
+
+      file.insert(file.end(), bytes.begin(), bytes.end());
+    }
+
+    return file;
+  }
+
   Fat16* Fat16::print_boot_record() {
     std::cout << std::hex << std::showbase
               << "bytes_per_sector: " << this->boot_record.bytes_per_sector << std::endl;

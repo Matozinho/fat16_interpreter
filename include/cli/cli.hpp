@@ -27,10 +27,12 @@ private:
 
   Cli* execute_command(const std::string& command);
   void list_directory();
+  void print_file(std::string filename);
 
-  std::unordered_map<std::string, std::function<void()>> commands = {
-      {"ls", [this]() { this->list_directory(); }},
-      {"cat", [this]() { this->fat->unimplemented_logic(); }},
-      {"cd", [this]() { this->fat->unimplemented_logic(); }},
+  std::unordered_map<std::string, std::function<void(std::vector<std::string> params)>> commands = {
+      {"ls", [this](std::vector<std::string> params) { this->list_directory(); }},
+      {"cat", [this](std::vector<std::string> params) { this->print_file(params[0]); }},
+      {"cd", [this](std::vector<std::string> params) { this->fat->unimplemented_logic(); }},
+      {"clear", [this](std::vector<std::string> params) { std::system("clear"); }},
   };
 };
