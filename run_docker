@@ -1,0 +1,8 @@
+#! /bin/bash
+
+docker build -t fat16_interpreter .
+docker create -it --name matozinho_fat16 fat16_interpreter /bin/bash
+docker start matozinho_fat16
+docker attach matozinho_fat16
+
+# docker cp assets2 matozinho_fat16:/home/cppdev/assets

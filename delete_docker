@@ -1,0 +1,7 @@
+#! /bin/bash
+
+# Remove all the containers with the image fat16_interpreter
+docker container rm $(docker container ls -a | grep fat16_interpreter | awk '{print $1}')
+
+# Remove the image
+docker image rm $(docker image ls | grep fat16_interpreter | awk '{print $3}')
