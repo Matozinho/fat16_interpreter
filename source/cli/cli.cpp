@@ -6,26 +6,9 @@
 #include <interpreter/fat16.hpp>
 #include <iostream>
 #include <ostream>
-#include <penis/penis.hpp>
+#include <prepucio/repl.hpp>
 #include <utils/utils.hpp>
 #include <vector>
-
-Cli* Cli::execute_command(const std::string& command) {
-  // split command in the space
-  auto splited_command = Utils::split(command, ' ');
-
-  auto it = this->commands.find(splited_command[0]);
-  if (it == this->commands.end()) {
-    std::cout << "Unknown command: " << splited_command[0] << std::endl;
-
-    return this;
-  }
-
-  splited_command.erase(splited_command.begin());
-  it->second(splited_command);
-
-  return this;
-}
 
 void Cli::get_path() {
   std::stack<interpreter::Fat16::fat_dir_entry> dir_stack_copy = dir_stack;
@@ -110,7 +93,7 @@ void Cli::print_file(std::string filename) {
     return;
   }
 
-  std::vector<unsigned char> file_content = this->fat->get_file(entry);
+  std::vector<uint8_t> file_content = this->fat->get_file(entry);
 
   for (auto c : file_content) {
     std::cout << c;
@@ -121,12 +104,23 @@ void Cli::print_file(std::string filename) {
 }
 
 Cli* Cli::run() {
-  penis::PromptBuilder repl;
+  prepucio::REPL::Builder builder;
 
-  repl.subscribe([this](const std::string& command) { this->execute_command(command); });
-  repl.prompt("|> ");
+  std::unique_ptr<prepucio::REPL> repl
+      = builder
+            .addCommand("ls", "List all the entries of the directory",
+                        [this]() { this->list_directory(); })
+            .addCommand("cat", "Show the content of the specified file",
+                        [this](std::string filename) { this->print_file(filename); })
+            .addCommand("cd", "Change to the specified directory",
+                        [this](std::string dirname) { this->change_directory(dirname); })
+            .addCommand("pwd", "Show the path to the current directory",
+                        [this]() { this->get_path(); })
+            .addCommand("clear", "Clear the console", []() { std::system("clear"); })
+            .build();
 
-  repl.run();
+  repl->prompt("|> ");
+  repl->run();
 
   return this;
 }

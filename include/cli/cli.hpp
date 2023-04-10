@@ -29,17 +29,8 @@ private:
   interpreter::Fat16::fat_dir_entry current_dir_entry;
   std::stack<interpreter::Fat16::fat_dir_entry> dir_stack;
 
-  Cli* execute_command(const std::string& command);
   void list_directory();
   void print_file(std::string filename);
   void change_directory(std::string directory);
   void get_path();
-
-  std::unordered_map<std::string, std::function<void(std::vector<std::string> params)>> commands = {
-      {"ls", [this](std::vector<std::string> params) { this->list_directory(); }},
-      {"cat", [this](std::vector<std::string> params) { this->print_file(params[0]); }},
-      {"cd", [this](std::vector<std::string> params) { this->change_directory(params[0]); }},
-      {"pwd", [this](std::vector<std::string> params) { this->get_path(); }},
-      {"clear", [this](std::vector<std::string> params) { std::system("clear"); }},
-  };
 };

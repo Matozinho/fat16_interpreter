@@ -4,4 +4,4 @@
 build/
 
 compile_commands.json
-assets/*.img
+.bash_history

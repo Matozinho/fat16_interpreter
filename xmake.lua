@@ -1,7 +1,7 @@
 set_languages("c++20")
 add_rules("mode.debug", "mode.release")
 
-local libs = { "fmt", "gtest", "cxxopts", "penis" }
+local libs = { "fmt", "gtest", "prepucio", "cxxopts" }
 
 add_includedirs("include")
 add_requires(table.unpack(libs))
