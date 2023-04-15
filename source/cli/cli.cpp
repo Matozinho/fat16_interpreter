@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cli/cli.hpp>
+#include <cstdint>
 #include <functional>
 #include <interpreter/fat16.hpp>
 #include <iostream>
@@ -41,33 +42,48 @@ void Cli::change_directory(std::string dir_name) {
   interpreter::Fat16::fat_dir_entry& dir_entry
       = *(reinterpret_cast<interpreter::Fat16::fat_dir_entry*>(&(*dir_it)));
 
-  if (static_cast<interpreter::Fat16::FileType>(dir_entry.attribute)
-      != interpreter::Fat16::FileType::DIRECTORY) {
-    fmt::print("Is not a directory\n");
+  if (dir_entry.attribute & static_cast<uint8_t>(interpreter::Fat16::FileType::DIRECTORY)) {
+    this->current_dir_entry = dir_entry;
+    this->current_dir_entries
+        = this->fat->get_dir_entries(this->current_dir_entry.low_first_cluster);
+    if (Utils::mount_name(dir_entry.name, dir_entry.extension) == "..")
+      this->dir_stack.pop();
+    else
+      this->dir_stack.push(this->current_dir_entry);
 
     return;
   }
 
-  this->current_dir_entry = dir_entry;
-  this->current_dir_entries = this->fat->get_dir_entries(this->current_dir_entry.low_first_cluster);
-  if (Utils::mount_name(dir_entry.name, dir_entry.extension) == "..")
-    this->dir_stack.pop();
-  else
-    this->dir_stack.push(this->current_dir_entry);
+  fmt::print("Is not a directory\n");
+}
+
+std::string Cli::get_filetype_icon(uint8_t type) {
+  std::string emojiString;
+
+  if (type & static_cast<uint8_t>(interpreter::Fat16::FileType::DIRECTORY)) emojiString += "📁";
+
+  if (type & static_cast<uint8_t>(interpreter::Fat16::FileType::ARCHIVE)) emojiString += "🗄️";
+
+  if (type & static_cast<uint8_t>(interpreter::Fat16::FileType::READ_ONLY)) emojiString += "🔒";
+
+  if (type & static_cast<uint8_t>(interpreter::Fat16::FileType::HIDDEN)) emojiString += "👀";
+
+  if (type & static_cast<uint8_t>(interpreter::Fat16::FileType::SYSTEM)) emojiString += "💻";
+
+  if (type & static_cast<uint8_t>(interpreter::Fat16::FileType::VOLUME_ID)) emojiString += "🔑";
+
+  return emojiString;
 }
 
 void Cli::list_directory() {
-  fmt::print("{:<10}{:<12}{:<20}\n", "type", "name", "size(bytes)");
-  fmt::print("{:-<10}{:-<12}{:-<20}\n", "", "", "");
+  fmt::print("{:<20}{:<20}{:<20}\n", "type", "name", "size(bytes)");
+  fmt::print("{:-<20}{:-<20}{:-<20}\n", "", "", "");
 
   for (const auto& entry : this->current_dir_entries) {
     std::string filename = Utils::mount_name(entry.name, entry.extension);
-    std::string filetype = static_cast<interpreter::Fat16::FileType>(entry.attribute)
-                                   == interpreter::Fat16::FileType::ARCHIVE
-                               ? "arch"
-                               : "dir";
+    std::string filetype_icon = this->get_filetype_icon(entry.attribute);
 
-    fmt::print("{:<10}{:<12}{:<20}\n", filetype, filename, entry.file_size);
+    fmt::print("{:<20}{:<20}{:<20}\n", filetype_icon, filename, entry.file_size);
   }
 }
 
@@ -86,21 +102,20 @@ void Cli::print_file(std::string filename) {
   interpreter::Fat16::fat_dir_entry& entry
       = *(reinterpret_cast<interpreter::Fat16::fat_dir_entry*>(&(*file)));
 
-  if (static_cast<interpreter::Fat16::FileType>(entry.attribute)
-      != interpreter::Fat16::FileType::ARCHIVE) {
-    std::cout << "Is not a file" << std::endl;
+  fmt::print("File validate: {}\n",
+             entry.attribute & static_cast<uint8_t>(interpreter::Fat16::FileType::ARCHIVE));
+  if (entry.attribute & static_cast<uint8_t>(interpreter::Fat16::FileType::ARCHIVE)) {
+    std::vector<uint8_t> file_content = this->fat->get_file(entry);
+
+    for (auto c : file_content) std::cout << c;
+
+    // in the case that the file haven't a new line at the end
+    std::cout << std::endl;
 
     return;
   }
 
-  std::vector<uint8_t> file_content = this->fat->get_file(entry);
-
-  for (auto c : file_content) {
-    std::cout << c;
-  }
-
-  // in the case that the file haven't a new line at the end
-  std::cout << std::endl;
+  std::cout << "Is not a file" << std::endl;
 }
 
 Cli* Cli::run() {

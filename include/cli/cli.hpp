@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <functional>
 #include <interpreter/fat16.hpp>
 #include <iostream>
@@ -29,6 +30,7 @@ private:
   interpreter::Fat16::fat_dir_entry current_dir_entry;
   std::stack<interpreter::Fat16::fat_dir_entry> dir_stack;
 
+  std::string get_filetype_icon(uint8_t type);
   void list_directory();
   void print_file(std::string filename);
   void change_directory(std::string directory);

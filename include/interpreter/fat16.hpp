@@ -49,7 +49,14 @@ namespace interpreter {
 
     } __attribute__((packed));
 
-    enum class FileType : uint8_t { DIRECTORY = 0x10, ARCHIVE = 0x20 };
+    enum class FileType : uint8_t {
+      DIRECTORY = 0x10,
+      ARCHIVE = 0x20,
+      READ_ONLY = 0x01,
+      HIDDEN = 0x02,
+      SYSTEM = 0x04,
+      VOLUME_ID = 0x08,
+    };
 
     Fat16(std::string file_name);
     ~Fat16();
